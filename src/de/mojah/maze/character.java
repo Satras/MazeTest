@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Hashtable;
 
 /**
- * Created by bm1-bayerth on 07.10.2015.
+ * Created on 07.10.2015.
  */
 public class character {
 
@@ -101,7 +101,7 @@ public class character {
         values = new HashMap<String, Integer>();
         values.put("str", 15);
         values.put("con", 10);
-        values.put("dex", 3);
+        values.put("dex", 8);
         values.put("int", 3);
         values.put("wis", 3);
         values.put("cha", 5);
@@ -164,6 +164,14 @@ public class character {
         weapon = 0;
     }
 
+    /**
+     *
+     * @param opponent
+     * @return
+     *      -1 : dodge
+     *      -2 : miss
+     *      0 - n : damage
+     */
     public int attackMelee(character opponent) {
 
         /*
@@ -178,20 +186,42 @@ public class character {
                 Warrior(0) => 1~5
                 Ranger(0)  => 1~3
                 Wizard(0)  => 1~2
-            Krit 19 - 20 => damage * 1.5
+            Krit 19 - 20 => MaxDamage * 1.5
 
+            modifiers ^= dexterity????
+            dex/5 + rand()*(20-dex/5)
 
+            hm, modifier may greater than 20?
+
+            damage reducion... after defence...
 
          */
 
-        int ret = -1; // Dodged
+        int modifierAttack = (int) (dexterity/5 + Math.random()*(20.0-dexterity/5));
+        int modifierDefence= (int) (opponent.dexterity/5 + Math.random()*(20.0*opponent.dexterity/5));
+        int maxDamage = strength/3;
 
-        int modifierAttack = (int) (Math.random()*20)+1;
-        int modifierDefence= (int) (Math.random()*20)+1;
+        System.out.println(className+"("+level+")" +" vs. "+opponent.className+"("+opponent.level+")");
+        System.out.println("maxDamage "+maxDamage);
+        System.out.println("modAtt    "+modifierAttack);
+        System.out.println("modDef    "+modifierDefence);
+        System.out.println();
+
+        // Miss
+        if(modifierAttack <=5 ) {
+            return(-2);
+        }
+
+        // Dodge
+        if(modifierDefence>=15) {
+            return(-1);
+        }
+
+
 
         //modifierAttack = 1;
         //modifierDefence= 1;
-
+        /*
         int maxDamage = strength/3;
         int damage = maxDamage;
         int attack = (dexterity/2 +  strength) * ((level+1)*modifierAttack);
@@ -219,7 +249,7 @@ public class character {
         System.out.println("evade     "+evade);
         System.out.println("damage r  "+damage);
         System.out.println();
-
+        */
         return(ret);
     }
 
