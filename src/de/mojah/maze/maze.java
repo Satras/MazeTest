@@ -5,7 +5,7 @@ import java.util.Hashtable;
 import java.util.Random;
 
 /**
- * Created by bm1-bayerth on 05.10.2015.
+ * Created on 05.10.2015.
  */
 
 /**

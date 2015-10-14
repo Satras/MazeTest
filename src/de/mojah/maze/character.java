@@ -1,7 +1,8 @@
 package de.mojah.maze;
 
+import java.io.FileWriter;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Hashtable;
 
 /**
  * Created on 07.10.2015.
@@ -67,6 +68,7 @@ public class character {
     String name;
 
     int hitpoints;
+    long died = 0; // Time [Millis]
 
     boolean isFlying;
 
@@ -154,7 +156,7 @@ public class character {
         wisdom = stats.get("wis");
         charisma = stats.get("cha");
 
-        // Interge division!!!!
+        // Integer division!!!!
         hitpoints = (int) (strength/2+ constitution/3+ dexterity/6+ intelligence/6);
 
         isFlying = false;
@@ -170,8 +172,10 @@ public class character {
      * @return
      *      -1 : dodge
      *      -2 : miss
+     *      -10 : Opponent already dead
      *      0 - n : damage
      */
+    private boolean debugHeading = false;
     public int attackMelee(character opponent) {
 
         /*
@@ -192,78 +196,155 @@ public class character {
             dex/5 + rand()*(20-dex/5)
 
             hm, modifier may greater than 20?
+            dodge : attM / defM < 20% (0.2)
 
             damage reducion... after defence...
 
          */
 
+        int ret = -1000;
+
+        if(opponent.died!=0) {
+            return(-10);
+        }
+
+        ArrayList dAL = new ArrayList();
+
         int modifierAttack = (int) (dexterity/5 + Math.random()*(20.0-dexterity/5));
+        int modifierAttackMax = (int) (dexterity/5 + (20.0-dexterity/5));
+        if(modifierAttack<1) {
+            modifierAttack = (int) (dexterity/5 + Math.random()*(20.0));
+            modifierAttackMax = (int) (dexterity/5 + 0.999D*(20.0));
+        }
+
         int modifierDefence= (int) (opponent.dexterity/5 + Math.random()*(20.0*opponent.dexterity/5));
+        int modifierDefenceMax = (int) (opponent.dexterity/5 + (20.0*opponent.dexterity/5));
+        if(modifierDefence<1) {
+            modifierDefence = (int) (opponent.dexterity/5 + Math.random()*(20.0));
+            modifierDefenceMax = (int) (opponent.dexterity/5 + 0.999D*(20.0));
+        }
+
         int maxDamage = strength/3;
 
-        System.out.println(className+"("+level+")" +" vs. "+opponent.className+"("+opponent.level+")");
-        System.out.println("maxDamage "+maxDamage);
-        System.out.println("modAtt    "+modifierAttack);
-        System.out.println("modDef    "+modifierDefence);
-        System.out.println();
-
-        // Miss
-        if(modifierAttack <=5 ) {
-            return(-2);
+        // Miss && dodge
+        if(1D*modifierAttack/modifierAttackMax <=0.1D) {
+            ret=-2;
+        } else if (1D*modifierAttack/modifierDefence<=0.2D) {
+            ret=-1;
         }
 
-        // Dodge
-        if(modifierDefence>=15) {
-            return(-1);
-        }
-
-
-
-        //modifierAttack = 1;
-        //modifierDefence= 1;
-        /*
-        int maxDamage = strength/3;
-        int damage = maxDamage;
-        int attack = (dexterity/2 +  strength) * ((level+1)*modifierAttack);
-        int evade = (opponent.dexterity/2 + opponent.constitution) * ((opponent.level+1)*modifierDefence);
-
-        if(attack <= evade) {
-            damage = (int)(1.0D*damage * (attack/(evade*(opponent.level+2))));
-        } else {
-            damage = (int)(1.0D*damage * ((attack*(level+2)/evade)));
-        }
-
-        if(damage > maxDamage) {
+        int damage = (int) (maxDamage * (1D * modifierAttack/modifierDefence));
+        if(damage>maxDamage) {
             damage = maxDamage;
         }
 
-        if(damage == 0) {
-            ret = -1;
-        } else {
+        if(ret == -1000) {
             ret = damage;
+
+            opponent.applyDamage(damage);
         }
 
-        System.out.println(className+"("+level+")" +" vs. "+opponent.className+"("+opponent.level+")");
-        System.out.println("maxDamage "+maxDamage);
-        System.out.println("attack    "+attack);
-        System.out.println("evade     "+evade);
-        System.out.println("damage r  "+damage);
-        System.out.println();
+        /*
+        // debug... start
+
+        dAL.add(className);
+        dAL.add(level);
+        dAL.add(opponent.className);
+        dAL.add(opponent.level);
+        dAL.add(dexterity);
+        dAL.add(opponent.dexterity);
+        dAL.add(modifierAttack);
+        dAL.add(modifierDefence);
+        dAL.add(maxDamage);
+        dAL.add(damage);
+        dAL.add(ret);
+
+        String dStr = "";
+
+        if(!debugHeading) {
+            debugHeading = true;
+            dStr = ";aClass;aLevel;dClass;dLevel;aDexterity;dDexterity;aModi;dModi;maxDmg;Damage;Type";
+            debug(dStr);
+            dStr = "";
+        }
+
+
+        for(Object o : dAL.toArray()) {
+            dStr += ";"+o;
+        }
+        debug(dStr);
+
+        //debug... end
         */
+
+
+
+
         return(ret);
     }
 
-    public void levelUp() {
-        level++;
+    public int getMaxHitpoints() {
+        return((strength/2+ constitution/3+ dexterity/6+ intelligence/6));
+    }
 
+    /**
+     *
+     * @param amount
+     * @return
+     *      false   = char dead
+     *      true    = char alive
+     */
+    public boolean applyDamage(int amount) {
+        if(died!=0) {
+            return(false);
+        }
+
+        hitpoints -= amount;
+        if(hitpoints<=0) {
+            died = System.currentTimeMillis();
+            return(false);
+        }
+
+        return(true);
+    }
+
+    public boolean consumeItem(item food) {
+        if(!food.isConsumable()) {
+            return(false);
+        }
+
+        if(food.getHealthPerUse()>=0) {
+            hitpoints += food.getHealthPerUse();
+            if (hitpoints > getMaxHitpoints()) {
+                hitpoints = getMaxHitpoints();
+            }
+        } else {
+            applyDamage(food.getHealthPerUse());
+        }
+        return(true);
+    }
+
+    private void levelUp(int newLevel) {
+
+        level = newLevel;
+
+        // on levelup +startvalue/5+1
         HashMap<String, Integer> stats = (HashMap<String, Integer>) Classes.get(className);
 
-        strength = stats.get("str") + level* (stats.get("str")+1);
-        constitution = stats.get("con") + level* (stats.get("con")+1);
-        dexterity = stats.get("dex") + level* (stats.get("dex")+1);
-        intelligence = stats.get("int") + level* (stats.get("int")+1);
-        wisdom = stats.get("wis") + level* (stats.get("wis")+1);
-        charisma = stats.get("cha") + level* (stats.get("cha")+1);
+        strength = stats.get("str") + level* (stats.get("str")/5+1);
+        constitution = stats.get("con") + level* (stats.get("con")/5+1);
+        dexterity = stats.get("dex") + level* (stats.get("dex")/5+1);
+        intelligence = stats.get("int") + level* (stats.get("int")/5+1);
+        wisdom = stats.get("wis") + level* (stats.get("wis")/5+1);
+        charisma = stats.get("cha") + level* (stats.get("cha")/5+1);
+
+    }
+
+    public void levelUp() {
+
+        level++;
+
+        levelUp(level);
 
     }
 
@@ -281,8 +362,35 @@ public class character {
                 "Intelligence : "+intelligence      +"\n"+
                 "Wisdom       : "+wisdom            +"\n"+
                 "Charisma     : "+charisma          +"\n"+
+                "Hitpoints    : "+hitpoints+" / "+getMaxHitpoints() +"\n"+
                 ""
         );
+    }
+
+    public boolean debug = true;
+    FileWriter debugFile = null;
+    private void debug(Object obj) {
+        if(debug) {
+            if(debugFile==null) {
+                try {
+                    debugFile = new FileWriter("out.csv", false);
+                } catch(Exception e) {
+                    e.printStackTrace();
+                    //System.exit(0);
+                }
+            }
+
+            //System.out.println(obj);
+            if(debugFile!=null) {
+                try {
+                    debugFile.write(obj.toString()+"\n");
+                } catch(Exception e) {
+                    e.printStackTrace();
+                }
+            } else {
+                System.out.println(obj);
+            }
+        }
     }
 
 }

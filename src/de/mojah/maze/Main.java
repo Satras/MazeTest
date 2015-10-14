@@ -22,14 +22,38 @@ public class Main {
 
 
         character c1 = new character("Mojah","Warrior");
+        character c11 = new character("Mojah","Warrior");
         character c2 = new character("Mojah","Ranger");
         character c3 = new character("Mojah","Wizard");
 
         c3.levelUp();
 
-        System.out.println(c3);
+        System.out.println(c1);
+        for(int i=0;i<25;i++) {
+            c1.levelUp();
+        }
+        System.out.println(c1);
 
-        c1.attackMelee(c1);
+        int dcount = 0;
+        int mcount = 0;
+        int count = 0;
+        int damage = 0;
+        for(int i=0;i<1000;i++) {
+            int r = c11.attackMelee(c1);
+            if(r==-1) {
+                dcount++;
+            } else if(r==-2) {
+                mcount++;
+            } else {
+                count++;
+                damage += r;
+            }
+        }
+        System.out.println("dodged: "+dcount);
+        System.out.println("missed: "+mcount);
+        System.out.println("hit: "+count);
+        System.out.println("dmg :"+damage*1D/count);
+        /*
         c1.attackMelee(c2);
         c1.attackMelee(c3);
 
@@ -40,7 +64,7 @@ public class Main {
         c3.attackMelee(c1);
         c3.attackMelee(c2);
         c3.attackMelee(c3);
-
+        */
 
     }
 }
